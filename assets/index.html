@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IR Leaderboards | Home</title>
+</head>
+<style>
+    table, th, td {
+        border: 1px solid black;
+        border-collapse: collapse;
+    }
+</style>
+<body>
+<table>
+    <tr>
+        <th>Team Name</th>
+        {{ range $measure := .Measures }}
+            <th>{{ $measure }}</th>
+        {{ end }}
+    </tr>
+    {{ range $result := .Results }}
+        <tr>
+            <th>{{ $result.Team }}</th>
+            {{ range $value := $result.Measures }}
+                <th>{{ $value }}</th>
+            {{ end }}
+        </tr>
+    {{ end }}
+</table>
+</body>
+</html>

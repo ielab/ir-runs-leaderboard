@@ -1,0 +1,17 @@
+{
+  "database": "example.db",
+  "measures": [
+    "map",
+    "recip_rank",
+    "Rprec"
+  ],
+  "sort_on": "map",
+  "trec_eval": {
+    "bin": "trec_eval/trec_eval",
+    "args": "-q"
+  },
+  "teams": {
+    "Team 1": "supersecret1",
+    "Team 2": "supersecret2"
+  }
+}

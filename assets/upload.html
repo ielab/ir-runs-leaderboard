@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IR Leaderboards | Upload</title>
+</head>
+
+<body>
+<h1>Upload run for {{ .Team }}</h1>
+<form action="/upload" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="secret" value="{{ .Secret }}">
+    <input type="hidden" name="team" value="{{ .Team }}">
+    <input type="file" name="run">
+    <button type="submit">Submit</button>
+</form>
+</body>
+</html>
