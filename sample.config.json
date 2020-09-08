@@ -8,7 +8,8 @@
   "sort_on": "map",
   "trec_eval": {
     "bin": "trec_eval/trec_eval",
-    "args": "-q"
+    "args": "-q",
+    "qrels": "path/to/qrels"
   },
   "teams": {
     "Team 1": "supersecret1",
