@@ -73,7 +73,7 @@ func main() {
 	r.GET("/", s.index)
 	r.GET("/upload", s.addRunView)
 	r.POST("/upload", s.addRun)
-
+	r.Static("/static/", "./assets/static")
 	panic(r.Run(":8088"))
 
 }

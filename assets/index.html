@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="static/bootstrap.min.css" type="text/css">
     <title>IR Leaderboards | Home</title>
 </head>
 <style>
@@ -11,21 +12,33 @@
     }
 </style>
 <body>
-<table>
-    <tr>
-        <th>Team Name</th>
-        {{ range $measure := .Measures }}
-            <th>{{ $measure }}</th>
-        {{ end }}
-    </tr>
-    {{ range $result := .Results }}
-        <tr>
-            <th>{{ $result.Team }}</th>
-            {{ range $value := $result.Measures }}
-                <th>{{ $value }}</th>
-            {{ end }}
-        </tr>
-    {{ end }}
-</table>
+    <div style="height: 150px"></div>
+    <div class="container-xl">
+        <h1 class="text-center">INFS7410 2020 Challenge Leaderboard</h1>
+        <div style="height: 60px"></div>
+        <table class="table table-striped table-bordered table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Team Name</th>
+                        {{ range $measure := .Measures }}
+                            <th>{{ $measure }}</th>
+                        {{ end }}
+                </tr>
+            </thead>
+            <tbody>
+                {{ range $result := .Results }}
+                    <tr>
+                        <th>{{ $result.Team }}</th>
+                        {{ range $value := $result.Measures }}
+                            <th>{{ $value }}</th>
+                        {{ end }}
+                    </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+    <script src="static/jquery-3.5.1.slim.min.js" type="javascript"></script>
+    <script src="static/popper.min.js" type="javascript"></script>
+    <script src="static/bootstrap.min.js" type="javascript"></script>
 </body>
 </html>

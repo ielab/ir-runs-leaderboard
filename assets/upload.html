@@ -2,16 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="static/bootstrap.min.css" type="text/css">
+    <script src="static/jquery-3.5.1.slim.min.js" type="text/javascript"></script>
+    <script src="static/popper.min.js" type="text/javascript"></script>
+    <script src="static/bootstrap.min.js" type="text/javascript"></script>
     <title>IR Leaderboards | Upload</title>
 </head>
 
 <body>
-<h1>Upload run for {{ .Team }}</h1>
-<form action="/upload" method="post" enctype="multipart/form-data">
-    <input type="hidden" name="secret" value="{{ .Secret }}">
-    <input type="hidden" name="team" value="{{ .Team }}">
-    <input type="file" name="run">
-    <button type="submit">Submit</button>
-</form>
+    <div style="height: 100px"></div>
+    <div class="container border border-primary">
+        <div style="height: 20px"></div>
+        <h1 class="text-center">Upload Portal For {{ .Team }}</h1>
+        <div style="height: 120px"></div>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="secret" value="{{ .Secret }}">
+            <input type="hidden" name="team" value="{{ .Team }}">
+            <div class="input-group">
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input" id="customFile" name="run" aria-describedby="inputGroupFileAddon">
+                    <label class="custom-file-label" for="customFile">Choose Run File To Upload</label>
+                </div>
+                <div style="height: 100px"></div>
+                <button class="btn btn-primary btn-block" id="inputGroupFileAddon" type="submit">Submit</button>
+            </div>
+        </form>
+        <div style="height: 40px"></div>
+    </div>
+    <script>
+        $('#customFile').on('change',function(){
+            let fileName = $(this).val();
+            console.log(fileName)
+            $(this).next('.custom-file-label').html(fileName);
+        })
+    </script>
 </body>
 </html>

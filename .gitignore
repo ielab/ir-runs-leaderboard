@@ -1,2 +1,5 @@
 config.json
 *.db
+.DS_Store
+cmd/.DS_Store
+runs/
