@@ -42,6 +42,11 @@ type response struct {
 	Results  []result
 }
 
+type ErrorPage struct {
+	Error    string
+	BackLink string
+}
+
 func main() {
 
 	var s server
@@ -69,7 +74,7 @@ func main() {
 	}
 
 	r := gin.Default()
-	r.LoadHTMLFiles("assets/index.html", "assets/upload.html")
+	r.LoadHTMLFiles("assets/index.html", "assets/upload.html", "assets/error.html")
 	r.GET("/", s.index)
 	r.GET("/upload", s.addRunView)
 	r.POST("/upload", s.addRun)
@@ -100,7 +105,7 @@ func (s server) addRunView(c *gin.Context) {
 		})
 		return
 	}
-	c.String(http.StatusUnauthorized, "invalid secret")
+	c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Invalid Secret", BackLink: "/"})
 	return
 }
 
@@ -110,15 +115,14 @@ func (s server) addRun(c *gin.Context) {
 
 	// First, check to see if the secret is for this team.
 	if s.secrets[secret] != team {
-		c.String(http.StatusUnauthorized, "invalid secret")
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Invalid Secret", BackLink: "/"})
 		return
 	}
 
 	// Grab the run file from the POST form.
 	file, err := c.FormFile("run")
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "No Run File Uploaded", BackLink: "/"})
 		return
 	}
 
@@ -126,32 +130,28 @@ func (s server) addRun(c *gin.Context) {
 	fpath := strings.Replace(path.Join("runs", team), " ", "-", -1)
 	err = os.MkdirAll(fpath, 0777)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Team Directory Creation Error", BackLink: "/"})
 		return
 	}
 	fname := fmt.Sprintf("%s.%d.run", team, time.Now().Unix())
 	runPath := strings.Replace(path.Join(fpath, fname), " ", "-", -1)
 	err = c.SaveUploadedFile(file, runPath)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "File Saving Error", BackLink: "/"})
 		return
 	}
 
 	// Open the file and evaluate it from the disk.
 	result, err := irl.Eval(s.config.TrecEval.Bin, s.config.TrecEval.Args, s.config.TrecEval.Qrels, runPath)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Invalid Run File", BackLink: "/"})
 		return
 	}
 
 	// Update the run for this team.
 	err = irl.AddRun(s.db, team, result)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Result Update Error", BackLink: "/"})
 		return
 	}
 

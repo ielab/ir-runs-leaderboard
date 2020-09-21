@@ -15,7 +15,7 @@
         <div style="height: 20px"></div>
         <h1 class="text-center">Upload Portal For {{ .Team }}</h1>
         <div style="height: 120px"></div>
-        <form action="/upload" method="post" enctype="multipart/form-data">
+        <form action="/upload" id="uploadForm" method="post" enctype="multipart/form-data">
             <input type="hidden" name="secret" value="{{ .Secret }}">
             <input type="hidden" name="team" value="{{ .Team }}">
             <div class="input-group">
@@ -32,9 +32,9 @@
     <script>
         $('#customFile').on('change',function(){
             let fileName = $(this).val();
-            console.log(fileName)
+            console.log(fileName);
             $(this).next('.custom-file-label').html(fileName);
-        })
+        });
     </script>
 </body>
 </html>
