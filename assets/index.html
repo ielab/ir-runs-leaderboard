@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="static/bootstrap.min.css" type="text/css">
-    <title>IR Leaderboards | Home</title>
+    <title>{{ .Title }}</title>
 </head>
 <style>
     table, th, td {
@@ -14,7 +14,7 @@
 <body>
     <div style="height: 150px"></div>
     <div class="container-xl">
-        <h1 class="text-center">INFS7410 2020 Challenge Leaderboard</h1>
+        <h1 class="text-center">{{ .Header }}</h1>
         <div style="height: 60px"></div>
         <table class="table table-striped table-bordered table-hover">
             <thead class="thead-dark">

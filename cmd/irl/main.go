@@ -30,6 +30,8 @@ type config struct {
 		Args  string `json:"args"`
 		Qrels string `json:"qrels"`
 	} `json:"trec_eval"`
+	Title string `json:"title"`
+	Header string `json:"header"`
 }
 
 type result struct {
@@ -45,6 +47,10 @@ type response struct {
 type ErrorPage struct {
 	Error    string
 	BackLink string
+}
+
+type Page struct {
+	Content string
 }
 
 func main() {
@@ -86,11 +92,21 @@ func main() {
 func (s server) index(c *gin.Context) {
 	r, err := s.buildTeamsTable()
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusBadRequest, "error.html", ErrorPage{Error: "Error Loading Page", BackLink: "/"})
 		return
 	}
-	c.HTML(http.StatusOK, "index.html", r)
+	c.HTML(http.StatusOK, "index.html", struct {
+		Title string
+		Header string
+		Measures []string
+		Results  []result
+	}{
+		Title: s.config.Title,
+		Header: s.config.Header,
+		Measures: r.Measures,
+		Results: r.Results,
+	})
+	return
 }
 
 func (s server) addRunView(c *gin.Context) {
@@ -99,9 +115,11 @@ func (s server) addRunView(c *gin.Context) {
 		c.HTML(http.StatusOK, "upload.html", struct {
 			Secret string
 			Team   string
+			Title string
 		}{
 			Secret: secret,
 			Team:   team,
+			Title:  s.config.Title,
 		})
 		return
 	}

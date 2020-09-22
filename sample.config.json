@@ -14,5 +14,7 @@
   "teams": {
     "Team 1": "supersecret1",
     "Team 2": "supersecret2"
-  }
+  },
+  "header": "INFS7410 2020 Challenge Leaderboard",
+  "title": "IR Leaderboards"
 }
