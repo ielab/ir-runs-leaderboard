@@ -127,6 +127,15 @@ func (s server) addRunView(c *gin.Context) {
 	return
 }
 
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 func (s server) addRun(c *gin.Context) {
 	secret := c.PostForm("secret")
 	team := c.PostForm("team")
@@ -141,6 +150,13 @@ func (s server) addRun(c *gin.Context) {
 	file, err := c.FormFile("run")
 	if err != nil {
 		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "No Run File Uploaded", BackLink: "/"})
+		return
+	}
+
+	permittedFormat := []string {"TXT", "RES", "res", "txt"}
+	filenameParts := strings.Split(file.Filename, ".")
+	if !contains(permittedFormat, filenameParts[len(filenameParts) - 1]) {
+		c.HTML(http.StatusBadRequest, "error.html", ErrorPage{Error: "Wrong File Format", BackLink: "/"})
 		return
 	}
 
