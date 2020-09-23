@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -161,13 +162,16 @@ func (s server) addRun(c *gin.Context) {
 	}
 
 	// Save the file to the disk.
+	oldFilename := file.Filename
+	formattedFilename := oldFilename[:strings.LastIndex(oldFilename, ".")]
+	specialTeamName := team + "-" + formattedFilename
 	fpath := strings.Replace(path.Join("runs", team), " ", "-", -1)
 	err = os.MkdirAll(fpath, 0777)
 	if err != nil {
 		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Team Directory Creation Error", BackLink: "/"})
 		return
 	}
-	fname := fmt.Sprintf("%s.%d.run", team, time.Now().Unix())
+	fname := fmt.Sprintf("%s.%d.run", specialTeamName, time.Now().Unix())
 	runPath := strings.Replace(path.Join(fpath, fname), " ", "-", -1)
 	err = c.SaveUploadedFile(file, runPath)
 	if err != nil {
@@ -183,7 +187,7 @@ func (s server) addRun(c *gin.Context) {
 	}
 
 	// Update the run for this team.
-	err = irl.AddRun(s.db, team, result)
+	err = irl.AddRun(s.db, specialTeamName, result)
 	if err != nil {
 		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Result Update Error", BackLink: "/"})
 		return
@@ -194,9 +198,13 @@ func (s server) addRun(c *gin.Context) {
 }
 
 func (s server) buildTeamsTable() (*response, error) {
+	filenames, err := getAllRunFilenames()
+	if err != nil {
+		return nil, err
+	}
 	var r response
 	r.Measures = s.config.Measures
-	r.Results = make([]result, len(s.config.Teams))
+	r.Results = make([]result, len(filenames))
 
 	var sortOn int
 	for i := 0; i < len(r.Measures); i++ {
@@ -206,7 +214,7 @@ func (s server) buildTeamsTable() (*response, error) {
 	}
 
 	var i int
-	for k := range s.config.Teams {
+	for _, k := range filenames {
 		result, err := irl.GetRun(s.db, k)
 		if err != nil {
 			return nil, err
@@ -225,4 +233,23 @@ func (s server) buildTeamsTable() (*response, error) {
 	})
 
 	return &r, nil
+}
+
+func getAllRunFilenames() ([]string, error) {
+	var filenames []string
+	e := filepath.Walk("runs", func(path string, info os.FileInfo, err error) error {
+		if err == nil {
+			if strings.ContainsAny(info.Name(), ".") {
+				runName := strings.Replace(strings.Split(info.Name(), ".")[0], "-", " ", 2)
+				filenames = append(filenames,runName)
+			}
+		}
+		return nil
+	})
+	
+	if e != nil {
+		return nil, e
+	}
+	
+	return filenames, nil
 }

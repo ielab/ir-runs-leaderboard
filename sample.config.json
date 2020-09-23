@@ -1,5 +1,5 @@
 {
-  "database": "example.db",
+  "database": "storage.db",
   "measures": [
     "map",
     "recip_rank",
@@ -9,9 +9,10 @@
   "trec_eval": {
     "bin": "trec_eval/trec_eval",
     "args": "-q",
-    "qrels": "path/to/qrels"
+    "qrels": "test_data/test_set.qrels"
   },
   "teams": {
+    "Teaching Team": "ielabrocks",
     "Team 1": "supersecret1",
     "Team 2": "supersecret2"
   },

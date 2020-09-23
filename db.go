@@ -15,7 +15,10 @@ func AddRun(db *bolt.DB, team string, result *Result) error {
 		for k, v := range result.Topics["all"] {
 			var buff [8]byte
 			binary.BigEndian.PutUint64(buff[:], math.Float64bits(v))
-			b.Put([]byte(k), buff[:])
+			err := b.Put([]byte(k), buff[:])
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	})
