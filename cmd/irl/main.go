@@ -30,6 +30,8 @@ type config struct {
 		Args  string `json:"args"`
 		Qrels string `json:"qrels"`
 	} `json:"trec_eval"`
+	Title string `json:"title"`
+	Header string `json:"header"`
 }
 
 type result struct {
@@ -40,6 +42,15 @@ type result struct {
 type response struct {
 	Measures []string
 	Results  []result
+}
+
+type ErrorPage struct {
+	Error    string
+	BackLink string
+}
+
+type Page struct {
+	Content string
 }
 
 func main() {
@@ -69,7 +80,7 @@ func main() {
 	}
 
 	r := gin.Default()
-	r.LoadHTMLFiles("assets/index.html", "assets/upload.html")
+	r.LoadHTMLFiles("assets/index.html", "assets/upload.html", "assets/error.html")
 	r.GET("/", s.index)
 	r.GET("/upload", s.addRunView)
 	r.POST("/upload", s.addRun)
@@ -81,11 +92,21 @@ func main() {
 func (s server) index(c *gin.Context) {
 	r, err := s.buildTeamsTable()
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusBadRequest, "error.html", ErrorPage{Error: "Error Loading Page", BackLink: "/"})
 		return
 	}
-	c.HTML(http.StatusOK, "index.html", r)
+	c.HTML(http.StatusOK, "index.html", struct {
+		Title string
+		Header string
+		Measures []string
+		Results  []result
+	}{
+		Title: s.config.Title,
+		Header: s.config.Header,
+		Measures: r.Measures,
+		Results: r.Results,
+	})
+	return
 }
 
 func (s server) addRunView(c *gin.Context) {
@@ -94,14 +115,25 @@ func (s server) addRunView(c *gin.Context) {
 		c.HTML(http.StatusOK, "upload.html", struct {
 			Secret string
 			Team   string
+			Title string
 		}{
 			Secret: secret,
 			Team:   team,
+			Title:  s.config.Title,
 		})
 		return
 	}
-	c.String(http.StatusUnauthorized, "invalid secret")
+	c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Invalid Secret", BackLink: "/"})
 	return
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
 
 func (s server) addRun(c *gin.Context) {
@@ -110,15 +142,21 @@ func (s server) addRun(c *gin.Context) {
 
 	// First, check to see if the secret is for this team.
 	if s.secrets[secret] != team {
-		c.String(http.StatusUnauthorized, "invalid secret")
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Invalid Secret", BackLink: "/"})
 		return
 	}
 
 	// Grab the run file from the POST form.
 	file, err := c.FormFile("run")
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "No Run File Uploaded", BackLink: "/"})
+		return
+	}
+
+	permittedFormat := []string {"TXT", "RES", "res", "txt"}
+	filenameParts := strings.Split(file.Filename, ".")
+	if !contains(permittedFormat, filenameParts[len(filenameParts) - 1]) {
+		c.HTML(http.StatusBadRequest, "error.html", ErrorPage{Error: "Wrong File Format", BackLink: "/"})
 		return
 	}
 
@@ -126,32 +164,28 @@ func (s server) addRun(c *gin.Context) {
 	fpath := strings.Replace(path.Join("runs", team), " ", "-", -1)
 	err = os.MkdirAll(fpath, 0777)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Team Directory Creation Error", BackLink: "/"})
 		return
 	}
 	fname := fmt.Sprintf("%s.%d.run", team, time.Now().Unix())
 	runPath := strings.Replace(path.Join(fpath, fname), " ", "-", -1)
 	err = c.SaveUploadedFile(file, runPath)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "File Saving Error", BackLink: "/"})
 		return
 	}
 
 	// Open the file and evaluate it from the disk.
 	result, err := irl.Eval(s.config.TrecEval.Bin, s.config.TrecEval.Args, s.config.TrecEval.Qrels, runPath)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Invalid Run File", BackLink: "/"})
 		return
 	}
 
 	// Update the run for this team.
 	err = irl.AddRun(s.db, team, result)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		panic(err)
+		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Result Update Error", BackLink: "/"})
 		return
 	}
 
