@@ -35,7 +35,7 @@ func Decode(r io.Reader) (*Result, error) {
 
 		// Special case: the runid must be parsed separately.
 		if topic == "all" && name == "runid" {
-			result.RunId = name
+			result.RunId = columns[2]
 			continue
 		}
 
@@ -54,4 +54,11 @@ func Decode(r io.Reader) (*Result, error) {
 	}
 
 	return &result, nil
+}
+
+func ExtractRunIdFromRun(r io.Reader) (string, error) {
+	scanner := bufio.NewScanner(r)
+	scanner.Scan()
+	columns := strings.Fields(scanner.Text())
+	return columns[5], nil
 }

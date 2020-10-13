@@ -6,16 +6,20 @@ import (
 	"math"
 )
 
-func AddRun(db *bolt.DB, team string, result *Result) error {
+func AddRun(db *bolt.DB, team, run string, result *Result) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(team))
+		tb, err := tx.CreateBucketIfNotExists([]byte(team))
+		if err != nil {
+			return err
+		}
+		rb, err := tb.CreateBucketIfNotExists([]byte(run))
 		if err != nil {
 			return err
 		}
 		for k, v := range result.Topics["all"] {
 			var buff [8]byte
 			binary.BigEndian.PutUint64(buff[:], math.Float64bits(v))
-			err := b.Put([]byte(k), buff[:])
+			err := rb.Put([]byte(k), buff[:])
 			if err != nil {
 				return err
 			}
@@ -24,32 +28,34 @@ func AddRun(db *bolt.DB, team string, result *Result) error {
 	})
 }
 
-func GetRun(db *bolt.DB, team string) (*Result, error) {
-	result := new(Result)
-	result.RunId = team
-	result.Topics = make(map[string]map[string]float64)
-	result.Topics["all"] = make(map[string]float64)
+func GetRunsForTeam(db *bolt.DB, team string) (map[string]*Result, error) {
+	results := make(map[string]*Result)
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(team))
-		if b == nil {
+
+		tb := tx.Bucket([]byte(team))
+		if tb == nil {
 			return nil
 		}
-		return b.ForEach(func(k, v []byte) error {
-			result.Topics["all"][string(k)] = math.Float64frombits(binary.BigEndian.Uint64(v))
-			return nil
+		return tb.ForEach(func(run, v []byte) error {
+
+			result := new(Result)
+			result.RunId = string(run)
+			result.Topics = make(map[string]map[string]float64)
+			result.Topics["all"] = make(map[string]float64)
+			// https://github.com/boltdb/bolt/issues/295#issuecomment-72476443
+			tr := tb.Bucket(run)
+			if tr == nil {
+				return nil
+			}
+			err := tr.ForEach(func(k, v []byte) error {
+				result.Topics["all"][string(k)] = math.Float64frombits(binary.BigEndian.Uint64(v))
+				return nil
+			})
+
+			results[string(run)] = result
+			return err
 		})
 	})
-	return result, err
-}
 
-func GetRuns(db *bolt.DB, teams ...string) (map[string]*Result, error) {
-	results := make(map[string]*Result)
-	for _, team := range teams {
-		var err error
-		results[team], err = GetRun(db, team)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return results, nil
+	return results, err
 }

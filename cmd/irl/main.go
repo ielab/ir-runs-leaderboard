@@ -31,7 +31,7 @@ type config struct {
 		Args  string `json:"args"`
 		Qrels string `json:"qrels"`
 	} `json:"trec_eval"`
-	Title string `json:"title"`
+	Title  string `json:"title"`
 	Header string `json:"header"`
 }
 
@@ -97,15 +97,15 @@ func (s server) index(c *gin.Context) {
 		return
 	}
 	c.HTML(http.StatusOK, "index.html", struct {
-		Title string
-		Header string
+		Title    string
+		Header   string
 		Measures []string
 		Results  []result
 	}{
-		Title: s.config.Title,
-		Header: s.config.Header,
+		Title:    s.config.Title,
+		Header:   s.config.Header,
 		Measures: r.Measures,
-		Results: r.Results,
+		Results:  r.Results,
 	})
 	return
 }
@@ -116,7 +116,7 @@ func (s server) addRunView(c *gin.Context) {
 		c.HTML(http.StatusOK, "upload.html", struct {
 			Secret string
 			Team   string
-			Title string
+			Title  string
 		}{
 			Secret: secret,
 			Team:   team,
@@ -154,24 +154,27 @@ func (s server) addRun(c *gin.Context) {
 		return
 	}
 
-	permittedFormat := []string {"TXT", "RES", "res", "txt"}
+	permittedFormat := []string{"TXT", "RES", "res", "txt"}
 	filenameParts := strings.Split(file.Filename, ".")
-	if !contains(permittedFormat, filenameParts[len(filenameParts) - 1]) {
+	if !contains(permittedFormat, filenameParts[len(filenameParts)-1]) {
 		c.HTML(http.StatusBadRequest, "error.html", ErrorPage{Error: "Wrong File Format", BackLink: "/"})
 		return
 	}
 
-	// Save the file to the disk.
-	oldFilename := file.Filename
-	formattedFilename := oldFilename[:strings.LastIndex(oldFilename, ".")]
-	specialTeamName := team+ " " + formattedFilename
 	fpath := strings.Replace(path.Join("runs", team), " ", "-", -1)
 	err = os.MkdirAll(fpath, 0777)
 	if err != nil {
 		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Team Directory Creation Error", BackLink: "/"})
 		return
 	}
-	fname := fmt.Sprintf("%s.%d.run", specialTeamName, time.Now().Unix())
+
+	rf, err := file.Open()
+	if err != nil {
+		panic(err)
+	}
+	runId, err := irl.ExtractRunIdFromRun(rf)
+
+	fname := fmt.Sprintf("%s.%s.%d.run", team, runId, time.Now().Unix())
 	runPath := strings.Replace(path.Join(fpath, fname), " ", "-", -1)
 	err = c.SaveUploadedFile(file, runPath)
 	if err != nil {
@@ -182,12 +185,13 @@ func (s server) addRun(c *gin.Context) {
 	// Open the file and evaluate it from the disk.
 	result, err := irl.Eval(s.config.TrecEval.Bin, s.config.TrecEval.Args, s.config.TrecEval.Qrels, runPath)
 	if err != nil {
+		fmt.Println(err)
 		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Invalid Run File", BackLink: "/"})
 		return
 	}
 
 	// Update the run for this team.
-	err = irl.AddRun(s.db, specialTeamName, result)
+	err = irl.AddRun(s.db, team, result.RunId, result)
 	if err != nil {
 		c.HTML(http.StatusUnauthorized, "error.html", ErrorPage{Error: "Result Update Error", BackLink: "/"})
 		return
@@ -198,13 +202,8 @@ func (s server) addRun(c *gin.Context) {
 }
 
 func (s server) buildTeamsTable() (*response, error) {
-	filenames, err := getAllRunFilenames()
-	if err != nil {
-		return nil, err
-	}
 	var r response
 	r.Measures = s.config.Measures
-	r.Results = make([]result, len(filenames))
 
 	var sortOn int
 	for i := 0; i < len(r.Measures); i++ {
@@ -213,21 +212,27 @@ func (s server) buildTeamsTable() (*response, error) {
 		}
 	}
 
-	var i int
-	for _, k := range filenames {
-		result, err := irl.GetRun(s.db, k)
+	for team := range s.config.Teams {
+		runs, err := irl.GetRunsForTeam(s.db, team)
 		if err != nil {
 			return nil, err
 		}
 
-		r.Results[i].Team = k
-		r.Results[i].Measures = make([]float64, len(r.Measures))
-		for j, measure := range r.Measures {
-			r.Results[i].Measures[j] = result.Topics["all"][measure]
+		if len(runs) == 0 {
+			continue
 		}
-		i++
-	}
 
+		for name, run := range runs {
+			var res result
+			res.Team = fmt.Sprintf("%s (%s)", team, name)
+			res.Measures = make([]float64, len(r.Measures))
+			for i, measure := range r.Measures {
+				res.Measures[i] = run.Topics["all"][measure]
+			}
+			r.Results = append(r.Results, res)
+		}
+	}
+	
 	sort.Slice(r.Results, func(i, j int) bool {
 		return r.Results[i].Measures[sortOn] > r.Results[j].Measures[sortOn]
 	})
@@ -241,15 +246,15 @@ func getAllRunFilenames() ([]string, error) {
 		if err == nil {
 			if strings.ContainsAny(info.Name(), ".") {
 				runName := strings.Replace(strings.Split(info.Name(), ".")[0], "-", " ", 2)
-				filenames = append(filenames,runName)
+				filenames = append(filenames, runName)
 			}
 		}
 		return nil
 	})
-	
+
 	if e != nil {
 		return nil, e
 	}
-	
+
 	return filenames, nil
 }
