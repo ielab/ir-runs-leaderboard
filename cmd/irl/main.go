@@ -164,7 +164,7 @@ func (s server) addRun(c *gin.Context) {
 	// Save the file to the disk.
 	oldFilename := file.Filename
 	formattedFilename := oldFilename[:strings.LastIndex(oldFilename, ".")]
-	specialTeamName := team + "-" + formattedFilename
+	specialTeamName := team+ " " + formattedFilename
 	fpath := strings.Replace(path.Join("runs", team), " ", "-", -1)
 	err = os.MkdirAll(fpath, 0777)
 	if err != nil {
