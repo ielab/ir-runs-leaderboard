@@ -5,12 +5,13 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
 // Eval calls the trec_eval binary at bin with the arguments, the qrels file, and run file
 // and returns a set of results.
 func Eval(bin, args, qrels, run string) (*Result, error) {
-	cmd := exec.Command(bin, args, qrels, run)
+	cmd := exec.Command(bin, append(append(strings.Fields(args), qrels), run)...)
 
 	r, err := cmd.StdoutPipe()
 	if err != nil {
